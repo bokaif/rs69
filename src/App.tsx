@@ -326,9 +326,16 @@ function App() {
     
     setIsLoading(true);
     
+    // Normalize section input - add 'S' prefix if it's just a number
+    let normalizedSection = selectedSection.trim();
+    if (/^\d+$/.test(normalizedSection)) {
+      // If it's just digits, add 'S' prefix
+      normalizedSection = 'S' + normalizedSection.padStart(2, '0');
+    }
+    
     // Find section index
     const sectionIndex = classesData.sections.findIndex(section => 
-      section.toLowerCase() === selectedSection.toLowerCase()
+      section.toLowerCase() === normalizedSection.toLowerCase()
     );
     
     if (sectionIndex === -1) {
@@ -360,105 +367,118 @@ function App() {
 
   if (currentView === 'input') {
     return (
-      <div className="min-h-screen bg-gray-900 relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-green-600/10 to-violet-600/10 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-amber-600/10 to-green-600/10 rounded-full blur-3xl"></div>
+      <div className='min-h-screen bg-pattern relative overflow-hidden'>
+        {/* Simplified background */}
+        <div className='absolute inset-0 overflow-hidden'>
+          <div className='absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-zinc-600/10 to-zinc-600/10 rounded-full blur-3xl'></div>
         </div>
 
-        <div className="relative z-10 container mx-auto px-6 py-20">
-          <div className="max-w-2xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-16">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-500 to-violet-600 rounded-3xl mb-8 shadow-2xl shadow-green-500/25">
-                <Icon icon="solar:calendar-bold-duotone" className="w-10 h-10 text-white" />
+        <div className='absolute inset-0 overflow-hidden'>
+          <div className='absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-zinc-600/10 to-zinc-600/10 rounded-full blur-3xl'></div>
+        </div>
+
+        <div className='relative z-10 flex items-center justify-center min-h-screen px-6'>
+          <div className='max-w-lg w-full'>
+            {/* Minimal Header */}
+            <div className='text-center mb-8'>
+              <div className='flex items-center justify-center space-x-4 mb-4'>
+                <div className='inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#a782e0] to-violet-600 rounded-2xl'>
+                  <Icon
+                    icon='solar:calendar-bold-duotone'
+                    className='w-10 h-10 text-white'
+                  />
+                </div>
+                <h1 className='text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent text-left'>
+                  RS Routine
+                  <p className='text-gray-400 text-sm mt-1 font-normal tracking-wide leading-relaxed text-left'>
+                    View your weekly schedule
+                  </p>
+                </h1>
               </div>
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent mb-6">
-                RS Routine Viewer
-              </h1>
-              <p className="text-xl text-gray-400 leading-relaxed max-w-lg mx-auto">
-                Enter your section to view your complete weekly routine with classes and dining schedules
-              </p>
             </div>
 
-            {/* Input Form */}
-            <div className="bg-gray-700/50 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden">
-              <div className="p-10">
-                <form onSubmit={handleSectionSubmit} className="space-y-8">
-                  <div>
-                    <label htmlFor="section" className="block text-sm font-semibold text-gray-300 mb-4">
-                      Section Code
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        id="section"
-                        value={selectedSection}
-                        onChange={(e) => setSelectedSection(e.target.value.toUpperCase())}
-                        placeholder="e.g., S01, S02, S03"
-                        className="w-full px-6 py-5 pl-14 text-lg bg-gray-800/50 text-white placeholder-gray-500 rounded-2xl focus:ring-2 focus:ring-green-500/50 focus:bg-gray-800/70 transition-all duration-300 backdrop-blur-sm"
-                        disabled={isLoading}
-                      />
-                      <Icon icon="solar:magnifer-bold-duotone" className="absolute left-5 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400" />
-                    </div>
-                    <p className="mt-3 text-sm text-gray-500">
-                      Enter your section code (S01 - S53)
-                    </p>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={!selectedSection.trim() || isLoading}
-                    className="w-full bg-gradient-to-r from-green-600 to-violet-600 hover:from-green-700 hover:to-violet-700 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed text-white font-semibold py-5 px-8 rounded-2xl transition-all duration-300 flex items-center justify-center space-x-3 shadow-lg hover:shadow-xl hover:shadow-green-500/25"
+            {/* Clean Input Form */}
+            <div className='bg-zinc-800 backdrop-blur-xl rounded-[2.5rem] p-8'>
+              <form onSubmit={handleSectionSubmit} className='space-y-6'>
+                <div>
+                  <label
+                    htmlFor='section'
+                    className='block text-sm font-medium text-gray-300 mb-3 text-left'
                   >
-                    {isLoading ? (
-                      <>
-                        <Icon icon="solar:refresh-bold-duotone" className="w-6 h-6 animate-spin" />
-                        <span>Loading Schedule...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Icon icon="solar:calendar-search-bold-duotone" className="w-6 h-6" />
-                        <span>View My Routine</span>
-                      </>
-                    )}
-                  </button>
-                </form>
-              </div>
-
-              {/* Features */}
-              <div className="bg-gray-800/30 px-10 py-8">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="flex items-center space-x-4">
-                    <Icon icon="solar:book-bold-duotone" className="w-6 h-6 text-green-400" />
-                    <span className="text-sm text-gray-300 font-medium">Class Schedule</span>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <Icon icon="solar:cup-hot-bold-duotone" className="w-6 h-6 text-amber-400" />
-                    <span className="text-sm text-gray-300 font-medium">Dining Times</span>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <Icon icon="logos:google-calendar" className="w-6 h-6" />
-                    <span className="text-sm text-gray-300 font-medium">Calendar Export</span>
+                    Section Number
+                  </label>
+                  <div className='relative'>
+                    <input
+                      type='number'
+                      id='section'
+                      value={selectedSection}
+                      onChange={(e) =>
+                        setSelectedSection(e.target.value.toUpperCase())
+                      }
+                      placeholder='25'
+                      className='w-full px-4 py-3 pl-12 text-md bg-zinc-700/50 text-white placeholder-zinc-500 rounded-2xl focus:outline-none focus:bg-zinc-700/70 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-left'
+                      disabled={isLoading}
+                    />
+                    <Icon
+                      icon='solar:magnifer-bold-duotone'
+                      className='absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400'
+                    />
                   </div>
                 </div>
-              </div>
+
+                <button
+                  type='submit'
+                  disabled={!selectedSection.trim() || isLoading}
+                  className='w-full bg-gradient-to-r from-[#a782e0] to-violet-600 hover:from-[#a782e0] hover:to-violet-700 disabled:from-zinc-600 disabled:to-zinc-600 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center space-x-2'
+                >
+                  {isLoading ? (
+                    <>
+                      <Icon
+                        icon='solar:refresh-bold-duotone'
+                        className='w-5 h-5 animate-spin'
+                      />
+                      <span>Loading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Icon
+                        icon='solar:calendar-search-bold-duotone'
+                        className='w-5 h-5'
+                      />
+                      <span>View Schedule</span>
+                    </>
+                  )}
+                </button>
+              </form>
             </div>
 
-            {/* Sample Sections */}
-            <div className="mt-12 text-center">
-              <p className="text-sm text-gray-500 mb-6">Try these sample sections:</p>
-              <div className="flex flex-wrap justify-center gap-3">
-                {['S01', 'S02', 'S03', 'S10', 'S25'].map((section) => (
-                  <button
-                    key={section}
-                    onClick={() => setSelectedSection(section)}
-                    className="px-5 py-2 text-sm bg-gray-800/50 text-gray-300 rounded-xl hover:bg-gray-700/50 hover:text-white transition-all duration-200 backdrop-blur-sm"
-                  >
-                    {section}
-                  </button>
-                ))}
+            {/* Features */}
+            <div className='mt-6 bg-zinc-800 rounded-[2.5rem] px-6 py-6'>
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-0'>
+                <div className='flex items-center space-x-3 py-2 md:py-0'>
+                  <Icon
+                    icon='solar:book-bold-duotone'
+                    className='w-5 h-5 text-green-400'
+                  />
+                  <span className='text-sm text-gray-300 font-medium'>
+                    Class Schedule
+                  </span>
+                </div>
+                <div className='flex items-center space-x-3 py-2 md:py-0 border-t md:border-t-0 md:border-l border-gray-700/50 md:pl-4'>
+                  <Icon
+                    icon='solar:cup-hot-bold-duotone'
+                    className='w-5 h-5 text-amber-400'
+                  />
+                  <span className='text-sm text-gray-300 font-medium'>
+                    Dining Times
+                  </span>
+                </div>
+                <div className='flex items-center space-x-3 py-2 md:py-0 border-t md:border-t-0 md:border-l border-gray-700/50 md:pl-4'>
+                  <Icon icon='logos:google-calendar' className='w-5 h-5' />
+                  <span className='text-sm text-gray-300 font-medium whitespace-nowrap'>
+                    Calendar Export
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -468,41 +488,70 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
+    <div className='min-h-screen bg-pattern flex flex-col relative overflow-hidden'>
+      {/* Background Elements */}
+      <div className='absolute inset-0 overflow-hidden'>
+        <div className='absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-zinc-600/10 to-zinc-600/10 rounded-full blur-3xl'></div>
+      </div>
+      <div className='absolute inset-0 overflow-hidden'>
+        <div className='absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-zinc-600/10 to-zinc-600/10 rounded-full blur-3xl'></div>
+      </div>
+
       {/* Header */}
-      <div className="bg-gray-800/50 backdrop-blur-xl sticky top-0 z-10 flex-shrink-0">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
+      <div className='bg-zinc-800/50 backdrop-blur-xl sticky top-0 z-10 flex-shrink-0 relative'>
+        <div className='container mx-auto px-4 py-4'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center space-x-3 md:space-x-6 flex-1 min-w-0'>
               <button
-                onClick={() => setCurrentView('input')}
-                className="flex items-center space-x-3 text-gray-400 hover:text-white transition-colors duration-200 group"
+                onClick={() => setCurrentView("input")}
+                className='flex items-center space-x-2 text-zinc-400 hover:text-white transition-colors duration-200 group flex-shrink-0'
               >
-                <Icon icon="solar:arrow-left-bold-duotone" className="w-6 h-6 group-hover:-translate-x-1 transition-transform duration-200" />
-                <span className="font-medium">Back</span>
+                <Icon
+                  icon='ion:arrow-back-outline'
+                  className='w-5 h-5 md:w-6 md:h-6 group-hover:-translate-x-1 transition-transform duration-200'
+                />
+                <span className='font-medium hidden sm:inline'>Back</span>
               </button>
-              <div>
-                <h1 className="text-2xl font-bold text-white">Weekly Routine</h1>
-                <p className="text-sm text-gray-400 mt-1">Section: <span className="text-green-400 font-medium">{selectedSection}</span></p>
+              <div className='min-w-0 flex-1'>
+                <h1 className='text-lg md:text-2xl font-bold text-white truncate'>
+                  Weekly Routine
+                </h1>
+                <p className='text-xs md:text-sm text-zinc-400 mt-1'>
+                  Section:{" "}
+                  <span className='text-[#a782e0] font-medium'>
+                    {selectedSection}
+                  </span>
+                </p>
               </div>
             </div>
-            
+
             {/* Google Calendar Export Button */}
             {isGoogleConfigured ? (
               <button
                 onClick={exportToGoogleCalendar}
                 disabled={isExporting}
-                className="flex items-center space-x-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                className='flex items-center space-x-1.5 bg-gradient-to-r from-[#a782e0] to-violet-600 hover:from-[#a782e0] hover:to-violet-700 disabled:from-zinc-600 disabled:to-zinc-600 disabled:cursor-not-allowed text-white font-medium px-3 md:px-6 py-2 md:py-3 rounded-2xl transition-all duration-300 flex-shrink-0'
               >
                 {isExporting ? (
                   <>
-                    <Icon icon="solar:refresh-bold-duotone" className="w-5 h-5 animate-spin" />
-                    <span>Exporting...</span>
+                    <Icon
+                      icon='solar:refresh-bold-duotone'
+                      className='w-4 h-4 md:w-5 md:h-5 animate-spin'
+                    />
+                    <span className='text-sm md:text-base'>Exporting...</span>
                   </>
                 ) : (
                   <>
-                    <Icon icon="logos:google-calendar" className="w-5 h-5" />
-                    <span>{isGoogleSignedIn ? 'Export to Calendar' : 'Connect Google Calendar'}</span>
+                    <Icon
+                      icon='logos:google-calendar'
+                      className='w-4 h-4 md:w-5 md:h-5'
+                    />
+                    <span className='text-sm md:text-base'>
+                      {isGoogleSignedIn ? "Export" : "Connect"}
+                    </span>
+                    <span className='hidden md:inline'>
+                      {isGoogleSignedIn ? " to Calendar" : " Google Calendar"}
+                    </span>
                   </>
                 )}
               </button>
@@ -514,63 +563,92 @@ function App() {
       </div>
 
       {/* Schedule Table - Full Height */}
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full bg-gray-800/30 backdrop-blur-xl">
-          <div className="h-full overflow-auto">
-            <table className="w-full h-full">
-              <thead className="bg-gray-700/50 sticky top-0 z-10">
+      <div className='flex-1 overflow-hidden relative'>
+        <div className='h-full bg-zinc-800/30 backdrop-blur-xl m-4 rounded-3xl overflow-hidden'>
+          <div className='h-full overflow-auto'>
+            <table className='w-full h-full'>
+              <thead className='bg-zinc-700/50 sticky top-0 z-10'>
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-200 w-32">
-                    <div className="flex items-center space-x-2">
-                      <Icon icon="solar:clock-circle-bold-duotone" className="w-4 h-4 text-green-400" />
+                  <th className='px-6 py-4 text-left text-sm font-bold text-zinc-200 w-32'>
+                    <div className='flex items-center space-x-2'>
+                      <Icon
+                        icon='solar:clock-circle-bold-duotone'
+                        className='w-4 h-4 text-[#a782e0]'
+                      />
                       <span>Time</span>
                     </div>
                   </th>
                   {dayLabels.map((day) => (
-                    <th key={day} className="px-4 py-4 text-center text-sm font-bold text-gray-200">
+                    <th
+                      key={day}
+                      className='px-4 py-4 text-center text-sm font-bold text-zinc-200'
+                    >
                       {day}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-700/30">
+              <tbody className='divide-y divide-zinc-700/30'>
                 {schedule.map((slot, index) => (
-                  <tr key={index} className="hover:bg-gray-700/20 transition-colors duration-200 h-24">
-                    <td className="px-6 py-4 text-sm font-bold text-gray-300 bg-gray-700/20 border-r border-gray-700/30">
+                  <tr
+                    key={index}
+                    className='hover:bg-zinc-700/20 transition-colors duration-200 h-24'
+                  >
+                    <td className='px-6 py-4 text-sm font-bold text-zinc-300 bg-zinc-700/20 border-r border-zinc-700/30'>
                       {slot.time}
                     </td>
                     {days.map((day) => {
-                      const item = slot[day as keyof TimeSlot] as ClassInfo | MealInfo | undefined;
+                      const item = slot[day as keyof TimeSlot] as
+                        | ClassInfo
+                        | MealInfo
+                        | undefined;
                       return (
-                        <td key={day} className="px-4 py-4 text-center border-r border-gray-700/20 last:border-r-0">
+                        <td
+                          key={day}
+                          className='px-4 py-4 text-center border-r border-zinc-700/20 last:border-r-0'
+                        >
                           {item ? (
-                            <div className="space-y-2">
-                              {'subject' in item ? (
+                            <div className='space-y-2'>
+                              {"subject" in item ? (
                                 // Class info
                                 <>
-                                  <div className="inline-block px-3 py-1 rounded-lg text-xs font-semibold bg-green-500/20 text-green-300 border border-green-500/30">
+                                  <div className='inline-block px-3 py-1 rounded-2xl text-xs font-semibold bg-[#a782e0]/20 text-[#a782e0] border border-[#a782e0]/30'>
                                     {item.subject}
                                   </div>
-                                  <div className="text-xs text-gray-400 space-y-1">
-                                    <div className="flex items-center justify-center space-x-1">
-                                      <Icon icon="solar:user-speak-bold-duotone" className="w-3 h-3" />
-                                      <span className="truncate text-xs">{item.faculty}</span>
+                                  <div className='text-xs text-zinc-400 space-y-1'>
+                                    <div className='flex items-center justify-center space-x-1'>
+                                      <Icon
+                                        icon='solar:user-speak-bold-duotone'
+                                        className='w-3 h-3'
+                                      />
+                                      <span className='truncate text-xs'>
+                                        {item.faculty}
+                                      </span>
                                     </div>
-                                    <div className="flex items-center justify-center space-x-1">
-                                      <Icon icon="solar:map-point-bold-duotone" className="w-3 h-3" />
-                                      <span className="text-xs">Room {item.room}</span>
+                                    <div className='flex items-center justify-center space-x-1'>
+                                      <Icon
+                                        icon='solar:map-point-bold-duotone'
+                                        className='w-3 h-3'
+                                      />
+                                      <span className='text-xs'>
+                                        Room {item.room}
+                                      </span>
                                     </div>
                                   </div>
                                 </>
                               ) : (
                                 // Meal info
-                                <div className={`inline-block px-3 py-1 rounded-lg text-xs font-semibold ${getMealTypeColor(item.meal)}`}>
+                                <div
+                                  className={`inline-block px-3 py-1 rounded-2xl text-xs font-semibold ${getMealTypeColor(
+                                    item.meal
+                                  )}`}
+                                >
                                   {item.meal}
                                 </div>
                               )}
                             </div>
                           ) : (
-                            <div className="text-gray-600 text-sm">—</div>
+                            <div className='text-zinc-600 text-sm'>—</div>
                           )}
                         </td>
                       );
