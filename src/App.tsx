@@ -152,11 +152,14 @@ function App() {
             // Meal event
             eventTitle = item.meal;
             eventDescription = `Dining time: ${item.timeRange}`;
-            eventLocation = 'Dining Hall';
+            eventLocation = 'Tripty';
           }
           
           // Generate a unique UID for each event
           const uid = `${dayIndex}-${slot.time.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}@rs-routine.local`;
+          
+          // Set end date to September 6th, 2024
+          const endDate = new Date('2024-09-06T23:59:59Z');
           
           events.push({
             uid,
@@ -165,7 +168,7 @@ function App() {
             location: eventLocation,
             dtstart: formatICSDate(start),
             dtend: formatICSDate(end),
-            rrule: 'FREQ=WEEKLY;COUNT=16', // Repeat for 16 weeks (semester)
+            rrule: `FREQ=WEEKLY;UNTIL=${formatICSDate(endDate)}`, // Repeat until September 6th, 2024
             timezone
           });
         }
@@ -176,7 +179,7 @@ function App() {
     const icsContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//RS Routine//Schedule Export//EN',
+      'PRODID:-//RS69 Routine//Schedule Export//EN',
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH'
     ];
@@ -462,7 +465,7 @@ function App() {
                   />
                 </div>
                 <h1 className='text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent text-left'>
-                  RS Routine
+                  RS 69 Routine
                   <p className='text-gray-400 text-sm mt-1 font-normal tracking-wide leading-relaxed text-left'>
                     View your weekly schedule
                   </p>
