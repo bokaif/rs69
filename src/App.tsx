@@ -243,17 +243,30 @@ function App() {
 
   // Load Google API script
   React.useEffect(() => {
-    if (currentView === 'schedule') {
+    if (currentView === 'schedule' && isGoogleConfigured) {
+      // Check if script is already loaded
+      if (document.querySelector('script[src="https://apis.google.com/js/api.js"]')) {
+        initializeGapi();
+        return;
+      }
+
       const script = document.createElement('script');
       script.src = 'https://apis.google.com/js/api.js';
       script.onload = initializeGapi;
+      script.onerror = () => {
+        console.warn('Failed to load Google API script');
+      };
       document.body.appendChild(script);
       
       return () => {
-        document.body.removeChild(script);
+        // Only remove if we added it
+        const existingScript = document.querySelector('script[src="https://apis.google.com/js/api.js"]');
+        if (existingScript && document.body.contains(existingScript)) {
+          document.body.removeChild(existingScript);
+        }
       };
     }
-  }, [currentView]);
+  }, [currentView, isGoogleConfigured]);
 
   // Process classes data for a specific section
   const getClassSchedule = (sectionIndex: number): TimeSlot[] => {
@@ -582,9 +595,7 @@ function App() {
                   </>
                 )}
               </button>
-            ) : (
-              <></>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
