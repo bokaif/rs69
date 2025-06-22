@@ -179,7 +179,7 @@ function App() {
     const icsContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//RS69 Routine//Schedule Export//EN',
+      'PRODID:-//RS 69 Routine//Schedule Export//EN',
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH'
     ];
@@ -443,7 +443,7 @@ function App() {
 
   if (currentView === 'input') {
     return (
-      <div className='min-h-screen bg-pattern relative overflow-hidden'>
+      <div className='min-h-[100dvh] bg-pattern relative overflow-hidden'>
         {/* Simplified background */}
         <div className='absolute inset-0 overflow-hidden'>
           <div className='absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-zinc-600/10 to-zinc-600/10 rounded-full blur-3xl'></div>
@@ -467,7 +467,7 @@ function App() {
                 <h1 className='text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent text-left'>
                   RS 69 Routine
                   <p className='text-gray-400 text-sm mt-1 font-normal tracking-wide leading-relaxed text-left'>
-                    View your weekly schedule
+                    Track of your schedule easily
                   </p>
                 </h1>
               </div>
@@ -530,8 +530,8 @@ function App() {
 
             {/* Features */}
             <div className='mt-6 bg-zinc-800 rounded-[2.5rem] px-6 py-6'>
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-0'>
-                <div className='flex items-center space-x-3 py-2 md:py-0'>
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-0'>
+                <div className='flex items-center justify-center md:justify-start space-x-3 py-3 md:py-0'>
                   <Icon
                     icon='solar:book-bold-duotone'
                     className='w-5 h-5 text-green-400'
@@ -540,7 +540,7 @@ function App() {
                     Class Schedule
                   </span>
                 </div>
-                <div className='flex items-center space-x-3 py-2 md:py-0 border-t md:border-t-0 md:border-l border-gray-700/50 md:pl-4'>
+                <div className='flex items-center justify-center md:justify-start space-x-3 py-3 md:py-0 relative before:content-[""] before:absolute before:top-0 before:left-1/2 before:-translate-x-1/2 before:w-52 before:h-px before:bg-gray-700/50 md:before:hidden md:border-l md:border-gray-700/50 md:pl-4'>
                   <Icon
                     icon='solar:cup-hot-bold-duotone'
                     className='w-5 h-5 text-amber-400'
@@ -549,7 +549,7 @@ function App() {
                     Dining Times
                   </span>
                 </div>
-                <div className='flex items-center space-x-3 py-2 md:py-0 border-t md:border-t-0 md:border-l border-gray-700/50 md:pl-4'>
+                <div className='flex items-center justify-center md:justify-start space-x-3 py-3 md:py-0 relative before:content-[""] before:absolute before:top-0 before:left-1/2 before:-translate-x-1/2 before:w-52 before:h-px before:bg-gray-700/50 md:before:hidden md:border-l md:border-gray-700/50 md:pl-4'>
                   <Icon
                     icon='solar:calendar-bold-duotone'
                     className='w-5 h-5 text-blue-400'
