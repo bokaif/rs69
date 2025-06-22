@@ -179,7 +179,7 @@ function App() {
     const icsContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//RS 69 Routine//Schedule Export//EN',
+      'PRODID:-//RS69 Routine//Schedule Export//EN',
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH'
     ];
@@ -559,6 +559,31 @@ function App() {
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* Developer Note Button */}
+            <div className='mt-6 text-center font-medium tracking-wide'>
+              <span className='text-sm text-zinc-500'>
+                Built by{" "}
+                <a
+                  href='https://github.com/bokaif'
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='text-zinc-300 hover:text-zinc-300 transition-colors duration-200'
+                >
+                  @bokaif
+                </a>{" "}
+                <span 
+                  className='text-zinc-500 border-b-2 border-dotted border-zinc-500/30 py-0.5 cursor-help relative group'
+                  title="Bolt & Cursor"
+                >
+                  et al.
+                  <span className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-zinc-700 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50'>
+                    Bolt & Cursor
+                    <span className='absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-zinc-700'></span>
+                  </span>
+                </span>
+              </span>
             </div>
           </div>
         </div>
