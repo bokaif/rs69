@@ -70,23 +70,50 @@ function App() {
   // Initialize Google API
   const initializeGapi = async () => {
     if (typeof window !== 'undefined' && window.gapi) {
-      await window.gapi.load('auth2', () => {
-        window.gapi.auth2.init({
-          client_id: GOOGLE_CLIENT_ID,
+      try {
+        // Load auth2 if not already loaded
+        await new Promise<void>((resolve, reject) => {
+          window.gapi.load('auth2', {
+            callback: resolve,
+            onerror: reject
+          });
         });
-      });
-      
-      await window.gapi.load('client', async () => {
-        await window.gapi.client.init({
-          apiKey: GOOGLE_API_KEY,
-          clientId: GOOGLE_CLIENT_ID,
-          discoveryDocs: [DISCOVERY_DOC],
-          scope: SCOPES
+
+        // Check if auth2 is already initialized
+        let authInstance;
+        try {
+          authInstance = window.gapi.auth2.getAuthInstance();
+        } catch {
+          // Not initialized yet, so initialize it
+          authInstance = await window.gapi.auth2.init({
+            client_id: GOOGLE_CLIENT_ID,
+          });
+        }
+
+        // Load client API
+        await new Promise<void>((resolve, reject) => {
+          window.gapi.load('client', {
+            callback: resolve,
+            onerror: reject
+          });
         });
-        
-        const authInstance = window.gapi.auth2.getAuthInstance();
+
+        // Initialize client if not already done
+        if (!window.gapi.client.calendar) {
+          await window.gapi.client.init({
+            apiKey: GOOGLE_API_KEY,
+            clientId: GOOGLE_CLIENT_ID,
+            discoveryDocs: [DISCOVERY_DOC],
+            scope: SCOPES
+          });
+        }
+
+        // Update sign-in status
         setIsGoogleSignedIn(authInstance.isSignedIn.get());
-      });
+      } catch (error) {
+        console.warn('Google API initialization failed:', error);
+        // Don't throw error, just disable Google features
+      }
     }
   };
 
