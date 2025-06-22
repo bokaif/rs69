@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Icon } from '@iconify/react';
+import React, { useState } from "react";
+import { Icon } from "@iconify/react";
 
 // Import JSON data
-import classesData from '../classes.json';
-import diningData from '../dining.json';
+import classesData from "../classes.json";
+import diningData from "../dining.json";
 
 interface ClassInfo {
   subject: string;
@@ -19,7 +19,7 @@ interface MealInfo {
 
 interface TimeSlot {
   time: string;
-  type: 'class' | 'meal';
+  type: "class" | "meal";
   sunday?: ClassInfo | MealInfo;
   monday?: ClassInfo | MealInfo;
   tuesday?: ClassInfo | MealInfo;
@@ -31,37 +31,37 @@ interface TimeSlot {
 
 function App() {
   // Local storage key for remembering last section
-  const STORAGE_KEY = 'rs-routine-last-section';
+  const STORAGE_KEY = "rs-routine-last-section";
 
   // Get section from URL hash or localStorage
   const getInitialSection = (): string => {
     // Check URL hash first
     const hash = window.location.hash;
     const urlSection = hash.substring(1); // Remove leading #
-    
+
     if (urlSection && /^\d+$/.test(urlSection)) {
       // If hash has a number, validate it exists in our data
-      const normalizedSection = 'S' + urlSection.padStart(2, '0');
-      const sectionExists = classesData.sections.some(section => 
-        section.toLowerCase() === normalizedSection.toLowerCase()
+      const normalizedSection = "S" + urlSection.padStart(2, "0");
+      const sectionExists = classesData.sections.some(
+        (section) => section.toLowerCase() === normalizedSection.toLowerCase()
       );
-      
+
       if (sectionExists) {
         return urlSection;
       } else {
         // Invalid section in hash, clear it
-        window.location.hash = '';
-        return localStorage.getItem(STORAGE_KEY) || '';
+        window.location.hash = "";
+        return localStorage.getItem(STORAGE_KEY) || "";
       }
     }
-    
+
     // No hash section, check localStorage
-    return localStorage.getItem(STORAGE_KEY) || '';
+    return localStorage.getItem(STORAGE_KEY) || "";
   };
 
   const initialSection = getInitialSection();
-  const [currentView, setCurrentView] = useState<'input' | 'schedule'>(
-    initialSection ? 'schedule' : 'input'
+  const [currentView, setCurrentView] = useState<"input" | "schedule">(
+    initialSection ? "schedule" : "input"
   );
   const [selectedSection, setSelectedSection] = useState(initialSection);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,79 +71,92 @@ function App() {
   // Save section to localStorage and update hash
   const saveSection = (section: string) => {
     localStorage.setItem(STORAGE_KEY, section);
-    window.location.hash = section ? section : '';
+    window.location.hash = section ? section : "";
   };
 
   // Clear section from localStorage and reset hash
   const clearSection = () => {
     localStorage.removeItem(STORAGE_KEY);
-    window.location.hash = '';
+    window.location.hash = "";
   };
 
   // Helper function to convert time string to minutes for proper sorting
   const timeToMinutes = (timeStr: string): number => {
-    const time = timeStr.split('-')[0].trim(); // Get start time
+    const time = timeStr.split("-")[0].trim(); // Get start time
     const [timePart, period] = time.split(/([AP]M)/);
-    const [hours, minutes] = timePart.split('.').map(Number);
-    
+    const [hours, minutes] = timePart.split(".").map(Number);
+
     let totalMinutes = (hours % 12) * 60 + (minutes || 0);
-    if (period === 'PM') totalMinutes += 12 * 60;
-    
+    if (period === "PM") totalMinutes += 12 * 60;
+
     return totalMinutes;
   };
 
   // Convert time string to Date object
-  const parseTimeToDate = (timeStr: string, dayOffset: number): { start: Date; end: Date } => {
-    const [startTime, endTime] = timeStr.split('-');
+  const parseTimeToDate = (
+    timeStr: string,
+    dayOffset: number
+  ): { start: Date; end: Date } => {
+    const [startTime, endTime] = timeStr.split("-");
+
     const today = new Date();
-    const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay())); // Get Sunday
-    
+    // Move to the next upcoming Sunday, or today if it is Sunday
+    today.setDate(today.getDate() + ((7 - today.getDay()) % 7));
+
     const parseTime = (time: string, date: Date) => {
       const [timePart, period] = time.trim().split(/([AP]M)/);
-      const [hours, minutes] = timePart.split('.').map(Number);
-      
+      const [hours, minutes] = timePart.split(".").map(Number);
+
       let hour = parseInt(hours.toString());
-      if (period === 'PM' && hour !== 12) hour += 12;
-      if (period === 'AM' && hour === 12) hour = 0;
-      
+      if (period === "PM" && hour !== 12) hour += 12;
+      if (period === "AM" && hour === 12) hour = 0;
+
       date.setHours(hour, minutes || 0, 0, 0);
       return new Date(date);
     };
-    
-    const eventDate = new Date(startOfWeek);
-    eventDate.setDate(startOfWeek.getDate() + dayOffset);
-    
+
+    const eventDate = new Date(today);
+    eventDate.setDate(today.getDate() + dayOffset);
+
     const start = parseTime(startTime, new Date(eventDate));
     const end = parseTime(endTime, new Date(eventDate));
-    
+
     return { start, end };
   };
 
   // Format date for ICS
   const formatICSDate = (date: Date): string => {
-    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
   };
 
   // Generate ICS content
   const generateICS = (): string => {
     const events = [];
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayNames = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ];
     const now = new Date();
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    
+
     for (const slot of schedule) {
       for (let dayIndex = 0; dayIndex < dayNames.length; dayIndex++) {
         const dayName = dayNames[dayIndex] as keyof TimeSlot;
         const item = slot[dayName] as ClassInfo | MealInfo | undefined;
-        
+
         if (item) {
           const { start, end } = parseTimeToDate(slot.time, dayIndex);
-          
-          let eventTitle = '';
-          let eventDescription = '';
-          let eventLocation = '';
-          
-          if ('subject' in item) {
+
+          let eventTitle = "";
+          let eventDescription = "";
+          let eventLocation = "";
+
+          if ("subject" in item) {
             // Class event
             eventTitle = `${item.subject} - Class`;
             eventDescription = `Instructor: ${item.faculty}\\nSection: ${item.section}`;
@@ -152,15 +165,15 @@ function App() {
             // Meal event
             eventTitle = item.meal;
             eventDescription = `Dining time: ${item.timeRange}`;
-            eventLocation = 'Tripty';
+            eventLocation = "Tripty";
           }
-          
+
           // Generate a unique UID for each event
-          const uid = `${dayIndex}-${slot.time.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}@rs-routine.local`;
-          
-          // Set end date to September 6th, 2024
-          const endDate = new Date('2024-09-06T23:59:59Z');
-          
+          const uid = `${dayIndex}-${slot.time.replace(
+            /[^a-zA-Z0-9]/g,
+            ""
+          )}-${Date.now()}@rs-routine.local`;
+
           events.push({
             uid,
             summary: eventTitle,
@@ -168,25 +181,25 @@ function App() {
             location: eventLocation,
             dtstart: formatICSDate(start),
             dtend: formatICSDate(end),
-            rrule: `FREQ=WEEKLY;UNTIL=${formatICSDate(endDate)}`, // Repeat until September 6th, 2024
-            timezone
+            rrule: "FREQ=WEEKLY;COUNT=12",
+            timezone,
           });
         }
       }
     }
-    
+
     // Build ICS content
     const icsContent = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//RS69 Routine//Schedule Export//EN',
-      'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH'
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//RS69 Routine//Schedule Export//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
     ];
-    
-    events.forEach(event => {
+
+    events.forEach((event) => {
       icsContent.push(
-        'BEGIN:VEVENT',
+        "BEGIN:VEVENT",
         `UID:${event.uid}`,
         `DTSTART:${event.dtstart}`,
         `DTEND:${event.dtend}`,
@@ -195,39 +208,42 @@ function App() {
         `DESCRIPTION:${event.description}`,
         `LOCATION:${event.location}`,
         `DTSTAMP:${formatICSDate(now)}`,
-        'STATUS:CONFIRMED',
-        'TRANSP:OPAQUE',
-        'END:VEVENT'
+        "STATUS:CONFIRMED",
+        "TRANSP:OPAQUE",
+        "END:VEVENT"
       );
     });
-    
-    icsContent.push('END:VCALENDAR');
-    
-    return icsContent.join('\r\n');
+
+    icsContent.push("END:VCALENDAR");
+
+    return icsContent.join("\r\n");
   };
 
   // Export schedule as ICS file
   const exportToICS = () => {
     setIsExporting(true);
-    
+
     try {
       const icsContent = generateICS();
-      const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+      const blob = new Blob([icsContent], {
+        type: "text/calendar;charset=utf-8",
+      });
       const url = URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
+
+      const link = document.createElement("a");
       link.href = url;
       link.download = `rs-routine-section-${selectedSection}.ics`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       URL.revokeObjectURL(url);
-      
-      alert('Calendar downloaded successfully! You can now import it into Google Calendar, Outlook, Apple Calendar, or any other calendar app.');
-    } catch (error) {
-      console.error('Error exporting ICS:', error);
-      alert('Failed to download calendar. Please try again.');
+
+      alert(
+        "Calendar downloaded successfully! You can now import it into Google Calendar, Outlook, Apple Calendar, or any other calendar app."
+      );
+    } catch {
+      alert("Failed to download calendar. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -236,9 +252,9 @@ function App() {
   // Process classes data for a specific section
   const getClassSchedule = (sectionIndex: number): TimeSlot[] => {
     const classSlots: TimeSlot[] = [];
-    
-    classesData.patterns.forEach(pattern => {
-      pattern.assignments.forEach(assignment => {
+
+    classesData.patterns.forEach((pattern) => {
+      pattern.assignments.forEach((assignment) => {
         if (assignment.section === sectionIndex) {
           const timeSlot = classesData.slots[assignment.slot];
           const subject = classesData.subjects[assignment.subject];
@@ -250,23 +266,25 @@ function App() {
             subject,
             faculty,
             room,
-            section
+            section,
           };
 
           // Find existing time slot or create new one
-          let existingSlot = classSlots.find(slot => slot.time === timeSlot);
+          let existingSlot = classSlots.find((slot) => slot.time === timeSlot);
           if (!existingSlot) {
             existingSlot = {
               time: timeSlot,
-              type: 'class'
+              type: "class",
             };
             classSlots.push(existingSlot);
           }
 
           // Add class to appropriate days
-          pattern.days.forEach(dayIndex => {
-            const dayName = classesData.days[dayIndex].toLowerCase() as keyof TimeSlot;
-            if (dayName !== 'time' && dayName !== 'type') {
+          pattern.days.forEach((dayIndex) => {
+            const dayName = classesData.days[
+              dayIndex
+            ].toLowerCase() as keyof TimeSlot;
+            if (dayName !== "time" && dayName !== "type") {
               (existingSlot as TimeSlot)[dayName] = classInfo;
             }
           });
@@ -280,32 +298,34 @@ function App() {
   // Process dining data
   const getDiningSchedule = (): TimeSlot[] => {
     const diningSlots: TimeSlot[] = [];
-    
-    diningData.patterns.forEach(pattern => {
-      pattern.slots.forEach(slotIndex => {
+
+    diningData.patterns.forEach((pattern) => {
+      pattern.slots.forEach((slotIndex) => {
         const timeRange = diningData.timeRanges[slotIndex];
         const mealIndex = pattern.slots.indexOf(slotIndex);
         const meal = diningData.meals[mealIndex] || diningData.meals[0];
-        
+
         const mealInfo: MealInfo = {
           meal,
-          timeRange
+          timeRange,
         };
 
         // Find existing time slot or create new one
-        let existingSlot = diningSlots.find(slot => slot.time === timeRange);
+        let existingSlot = diningSlots.find((slot) => slot.time === timeRange);
         if (!existingSlot) {
           existingSlot = {
             time: timeRange,
-            type: 'meal'
+            type: "meal",
           };
           diningSlots.push(existingSlot);
         }
 
         // Add meal to appropriate days
-        pattern.days.forEach(dayIndex => {
-          const dayName = diningData.days[dayIndex].toLowerCase() as keyof TimeSlot;
-          if (dayName !== 'time' && dayName !== 'type') {
+        pattern.days.forEach((dayIndex) => {
+          const dayName = diningData.days[
+            dayIndex
+          ].toLowerCase() as keyof TimeSlot;
+          if (dayName !== "time" && dayName !== "type") {
             (existingSlot as TimeSlot)[dayName] = mealInfo;
           }
         });
@@ -319,7 +339,7 @@ function App() {
   const getCombinedSchedule = (sectionIndex: number): TimeSlot[] => {
     const classSchedule = getClassSchedule(sectionIndex);
     const diningSchedule = getDiningSchedule();
-    
+
     return [...classSchedule, ...diningSchedule].sort((a, b) => {
       return timeToMinutes(a.time) - timeToMinutes(b.time);
     });
@@ -330,14 +350,15 @@ function App() {
     let normalizedSection = section.trim();
     if (/^\d+$/.test(normalizedSection)) {
       // If it's just digits, add 'S' prefix
-      normalizedSection = 'S' + normalizedSection.padStart(2, '0');
+      normalizedSection = "S" + normalizedSection.padStart(2, "0");
     }
-    
+
     // Find section index
-    const sectionIndex = classesData.sections.findIndex(sectionData => 
-      sectionData.toLowerCase() === normalizedSection.toLowerCase()
+    const sectionIndex = classesData.sections.findIndex(
+      (sectionData) =>
+        sectionData.toLowerCase() === normalizedSection.toLowerCase()
     );
-    
+
     if (sectionIndex === -1) {
       return false;
     }
@@ -351,33 +372,35 @@ function App() {
   const handleSectionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSection.trim()) return;
-    
+
     setIsLoading(true);
-    
+
     const success = loadScheduleForSection(selectedSection);
-    
+
     if (!success) {
-      alert('Section not found! Please try a valid section like S01, S02, etc.');
+      alert(
+        "Section not found! Please try a valid section like S01, S02, etc."
+      );
       setIsLoading(false);
       return;
     }
 
     // Save to localStorage and update URL
     saveSection(selectedSection.trim());
-    
-    await new Promise(resolve => setTimeout(resolve, 800));
+
+    await new Promise((resolve) => setTimeout(resolve, 800));
     setIsLoading(false);
-    setCurrentView('schedule');
+    setCurrentView("schedule");
   };
 
   // Load schedule on initial render if we have a section
   React.useEffect(() => {
-    if (initialSection && currentView === 'schedule') {
+    if (initialSection && currentView === "schedule") {
       const success = loadScheduleForSection(initialSection);
       if (!success) {
         // Invalid section, go to input
-        setCurrentView('input');
-        setSelectedSection('');
+        setCurrentView("input");
+        setSelectedSection("");
         clearSection();
       } else {
         // Valid section, save it to localStorage if it came from hash
@@ -395,53 +418,65 @@ function App() {
     const handleHashChange = () => {
       const hash = window.location.hash;
       const hashSection = hash.substring(1);
-      
+
       if (hashSection && /^\d+$/.test(hashSection)) {
         // Navigated to a section hash
-        const normalizedSection = 'S' + hashSection.padStart(2, '0');
-        const sectionExists = classesData.sections.some(section => 
-          section.toLowerCase() === normalizedSection.toLowerCase()
+        const normalizedSection = "S" + hashSection.padStart(2, "0");
+        const sectionExists = classesData.sections.some(
+          (section) => section.toLowerCase() === normalizedSection.toLowerCase()
         );
-        
+
         if (sectionExists) {
           setSelectedSection(hashSection);
           const success = loadScheduleForSection(hashSection);
           if (success) {
-            setCurrentView('schedule');
+            setCurrentView("schedule");
             localStorage.setItem(STORAGE_KEY, hashSection);
           }
         } else {
           // Invalid section, go to home
-          setCurrentView('input');
-          setSelectedSection('');
+          setCurrentView("input");
+          setSelectedSection("");
           localStorage.removeItem(STORAGE_KEY);
-          window.location.hash = '';
+          window.location.hash = "";
         }
       } else {
         // Navigated to home (no hash)
-        setCurrentView('input');
-        setSelectedSection('');
+        setCurrentView("input");
+        setSelectedSection("");
         localStorage.removeItem(STORAGE_KEY);
       }
     };
 
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
   const getMealTypeColor = (meal: string) => {
     switch (meal) {
-      case 'Breakfast': return 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30';
-      case 'Lunch': return 'bg-orange-500/20 text-orange-300 border border-orange-500/30';
-      case 'Dinner': return 'bg-purple-500/20 text-purple-300 border border-purple-500/30';
-      default: return 'bg-blue-500/20 text-blue-300 border border-blue-500/30';
+      case "Breakfast":
+        return "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30";
+      case "Lunch":
+        return "bg-orange-500/20 text-orange-300 border border-orange-500/30";
+      case "Dinner":
+        return "bg-purple-500/20 text-purple-300 border border-purple-500/30";
+      default:
+        return "bg-blue-500/20 text-blue-300 border border-blue-500/30";
     }
   };
 
-  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const days = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
+  const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  if (currentView === 'input') {
+  if (currentView === "input") {
     return (
       <div className='min-h-[100dvh] bg-pattern relative overflow-hidden'>
         {/* Simplified background */}
@@ -573,9 +608,9 @@ function App() {
                 >
                   @bokaif
                 </a>{" "}
-                <span 
+                <span
                   className='text-zinc-500 border-b-2 border-dotted border-zinc-500/30 py-0.5 cursor-help relative group'
-                  title="Bolt & Cursor"
+                  title='Bolt & Cursor'
                 >
                   et al.
                   <span className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-zinc-700 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50'>
@@ -609,7 +644,7 @@ function App() {
               <button
                 onClick={() => {
                   setCurrentView("input");
-                  setSelectedSection('');
+                  setSelectedSection("");
                   clearSection();
                 }}
                 className='flex items-center space-x-2 text-zinc-400 hover:text-white transition-colors duration-200 group flex-shrink-0'
