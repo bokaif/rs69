@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
   // Set base URL for GitHub Pages
-  base: '/rs69/',
+  base: '/rs69',
   optimizeDeps: {
     exclude: ['lucide-react'],
   },

@@ -5,15 +5,6 @@ import { Icon } from '@iconify/react';
 import classesData from '../classes.json';
 import diningData from '../dining.json';
 
-// Google Calendar types
-/* eslint-disable @typescript-eslint/no-explicit-any */
-declare global {
-  interface Window {
-    gapi: any;
-    google: any;
-  }
-}
-
 interface ClassInfo {
   subject: string;
   faculty: string;
@@ -39,21 +30,55 @@ interface TimeSlot {
 }
 
 function App() {
-  const [currentView, setCurrentView] = useState<'input' | 'schedule'>('input');
-  const [selectedSection, setSelectedSection] = useState('');
+  // Local storage key for remembering last section
+  const STORAGE_KEY = 'rs-routine-last-section';
+
+  // Get section from URL hash or localStorage
+  const getInitialSection = (): string => {
+    // Check URL hash first
+    const hash = window.location.hash;
+    const urlSection = hash.substring(1); // Remove leading #
+    
+    if (urlSection && /^\d+$/.test(urlSection)) {
+      // If hash has a number, validate it exists in our data
+      const normalizedSection = 'S' + urlSection.padStart(2, '0');
+      const sectionExists = classesData.sections.some(section => 
+        section.toLowerCase() === normalizedSection.toLowerCase()
+      );
+      
+      if (sectionExists) {
+        return urlSection;
+      } else {
+        // Invalid section in hash, clear it
+        window.location.hash = '';
+        return localStorage.getItem(STORAGE_KEY) || '';
+      }
+    }
+    
+    // No hash section, check localStorage
+    return localStorage.getItem(STORAGE_KEY) || '';
+  };
+
+  const initialSection = getInitialSection();
+  const [currentView, setCurrentView] = useState<'input' | 'schedule'>(
+    initialSection ? 'schedule' : 'input'
+  );
+  const [selectedSection, setSelectedSection] = useState(initialSection);
   const [isLoading, setIsLoading] = useState(false);
   const [schedule, setSchedule] = useState<TimeSlot[]>([]);
-  const [isGoogleSignedIn, setIsGoogleSignedIn] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  // Google Calendar configuration
-  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
-  const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-  const SCOPES = 'https://www.googleapis.com/auth/calendar';
+  // Save section to localStorage and update hash
+  const saveSection = (section: string) => {
+    localStorage.setItem(STORAGE_KEY, section);
+    window.location.hash = section ? section : '';
+  };
 
-  // Check if Google Calendar credentials are configured
-  const isGoogleConfigured = Boolean(GOOGLE_CLIENT_ID && GOOGLE_API_KEY);
+  // Clear section from localStorage and reset hash
+  const clearSection = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    window.location.hash = '';
+  };
 
   // Helper function to convert time string to minutes for proper sorting
   const timeToMinutes = (timeStr: string): number => {
@@ -65,73 +90,6 @@ function App() {
     if (period === 'PM') totalMinutes += 12 * 60;
     
     return totalMinutes;
-  };
-
-  // Initialize Google API
-  const initializeGapi = async () => {
-    if (typeof window !== 'undefined' && window.gapi) {
-      try {
-        // Load auth2 if not already loaded
-        await new Promise<void>((resolve, reject) => {
-          window.gapi.load('auth2', {
-            callback: resolve,
-            onerror: reject
-          });
-        });
-
-        // Check if auth2 is already initialized
-        let authInstance;
-        try {
-          authInstance = window.gapi.auth2.getAuthInstance();
-        } catch {
-          // Not initialized yet, so initialize it
-          authInstance = await window.gapi.auth2.init({
-            client_id: GOOGLE_CLIENT_ID,
-          });
-        }
-
-        // Load client API
-        await new Promise<void>((resolve, reject) => {
-          window.gapi.load('client', {
-            callback: resolve,
-            onerror: reject
-          });
-        });
-
-        // Initialize client if not already done
-        if (!window.gapi.client.calendar) {
-          await window.gapi.client.init({
-            apiKey: GOOGLE_API_KEY,
-            clientId: GOOGLE_CLIENT_ID,
-            discoveryDocs: [DISCOVERY_DOC],
-            scope: SCOPES
-          });
-        }
-
-        // Update sign-in status
-        setIsGoogleSignedIn(authInstance.isSignedIn.get());
-      } catch (error) {
-        console.warn('Google API initialization failed:', error);
-        // Don't throw error, just disable Google features
-      }
-    }
-  };
-
-  // Sign in to Google
-  const signInToGoogle = async () => {
-    if (!window.gapi) {
-      alert('Google API not loaded. Please refresh the page and try again.');
-      return;
-    }
-    
-    try {
-      const authInstance = window.gapi.auth2.getAuthInstance();
-      await authInstance.signIn();
-      setIsGoogleSignedIn(true);
-    } catch (error) {
-      console.error('Error signing in to Google:', error);
-      alert('Failed to sign in to Google. Please try again.');
-    }
   };
 
   // Convert time string to Date object
@@ -161,112 +119,116 @@ function App() {
     return { start, end };
   };
 
-  // Export schedule to Google Calendar
-  const exportToGoogleCalendar = async () => {
-    if (!isGoogleSignedIn) {
-      await signInToGoogle();
-      return;
-    }
+  // Format date for ICS
+  const formatICSDate = (date: Date): string => {
+    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  };
 
+  // Generate ICS content
+  const generateICS = (): string => {
+    const events = [];
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const now = new Date();
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    for (const slot of schedule) {
+      for (let dayIndex = 0; dayIndex < dayNames.length; dayIndex++) {
+        const dayName = dayNames[dayIndex] as keyof TimeSlot;
+        const item = slot[dayName] as ClassInfo | MealInfo | undefined;
+        
+        if (item) {
+          const { start, end } = parseTimeToDate(slot.time, dayIndex);
+          
+          let eventTitle = '';
+          let eventDescription = '';
+          let eventLocation = '';
+          
+          if ('subject' in item) {
+            // Class event
+            eventTitle = `${item.subject} - Class`;
+            eventDescription = `Instructor: ${item.faculty}\\nSection: ${item.section}`;
+            eventLocation = `Room ${item.room}`;
+          } else {
+            // Meal event
+            eventTitle = item.meal;
+            eventDescription = `Dining time: ${item.timeRange}`;
+            eventLocation = 'Dining Hall';
+          }
+          
+          // Generate a unique UID for each event
+          const uid = `${dayIndex}-${slot.time.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}@rs-routine.local`;
+          
+          events.push({
+            uid,
+            summary: eventTitle,
+            description: eventDescription,
+            location: eventLocation,
+            dtstart: formatICSDate(start),
+            dtend: formatICSDate(end),
+            rrule: 'FREQ=WEEKLY;COUNT=16', // Repeat for 16 weeks (semester)
+            timezone
+          });
+        }
+      }
+    }
+    
+    // Build ICS content
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//RS Routine//Schedule Export//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH'
+    ];
+    
+    events.forEach(event => {
+      icsContent.push(
+        'BEGIN:VEVENT',
+        `UID:${event.uid}`,
+        `DTSTART:${event.dtstart}`,
+        `DTEND:${event.dtend}`,
+        `RRULE:${event.rrule}`,
+        `SUMMARY:${event.summary}`,
+        `DESCRIPTION:${event.description}`,
+        `LOCATION:${event.location}`,
+        `DTSTAMP:${formatICSDate(now)}`,
+        'STATUS:CONFIRMED',
+        'TRANSP:OPAQUE',
+        'END:VEVENT'
+      );
+    });
+    
+    icsContent.push('END:VCALENDAR');
+    
+    return icsContent.join('\r\n');
+  };
+
+  // Export schedule as ICS file
+  const exportToICS = () => {
     setIsExporting(true);
     
     try {
-      const events = [];
-      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const icsContent = generateICS();
+      const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
       
-      for (const slot of schedule) {
-        for (let dayIndex = 0; dayIndex < dayNames.length; dayIndex++) {
-          const dayName = dayNames[dayIndex] as keyof TimeSlot;
-          const item = slot[dayName] as ClassInfo | MealInfo | undefined;
-          
-          if (item) {
-            const { start, end } = parseTimeToDate(slot.time, dayIndex);
-            
-            let eventTitle = '';
-            let eventDescription = '';
-            let eventLocation = '';
-            
-            if ('subject' in item) {
-              // Class event
-              eventTitle = `${item.subject} - Class`;
-              eventDescription = `Instructor: ${item.faculty}\nSection: ${item.section}`;
-              eventLocation = `Room ${item.room}`;
-            } else {
-              // Meal event
-              eventTitle = item.meal;
-              eventDescription = `Dining time: ${item.timeRange}`;
-              eventLocation = 'Dining Hall';
-            }
-            
-            events.push({
-              summary: eventTitle,
-              description: eventDescription,
-              location: eventLocation,
-              start: {
-                dateTime: start.toISOString(),
-                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-              },
-              end: {
-                dateTime: end.toISOString(),
-                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-              },
-              recurrence: ['RRULE:FREQ=WEEKLY;COUNT=16'], // Repeat for 16 weeks (semester)
-            });
-          }
-        }
-      }
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `rs-routine-section-${selectedSection}.ics`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       
-      // Create events in Google Calendar
-      const batch = window.gapi.client.newBatch();
+      URL.revokeObjectURL(url);
       
-      events.forEach(event => {
-        const request = window.gapi.client.calendar.events.insert({
-          calendarId: 'primary',
-          resource: event
-        });
-        batch.add(request);
-      });
-      
-              
-       await batch.then((response: any) => {
-        console.log('Events created successfully:', response);
-        alert(`Successfully exported ${events.length} events to your Google Calendar!`);
-      });
-      
+      alert('Calendar downloaded successfully! You can now import it into Google Calendar, Outlook, Apple Calendar, or any other calendar app.');
     } catch (error) {
-      console.error('Error exporting to Google Calendar:', error);
-      alert('Failed to export to Google Calendar. Please try again.');
+      console.error('Error exporting ICS:', error);
+      alert('Failed to download calendar. Please try again.');
     } finally {
       setIsExporting(false);
     }
   };
-
-  // Load Google API script
-  React.useEffect(() => {
-    if (currentView === 'schedule' && isGoogleConfigured) {
-      // Check if script is already loaded
-      if (document.querySelector('script[src="https://apis.google.com/js/api.js"]')) {
-        initializeGapi();
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = 'https://apis.google.com/js/api.js';
-      script.onload = initializeGapi;
-      script.onerror = () => {
-        console.warn('Failed to load Google API script');
-      };
-      document.body.appendChild(script);
-      
-      return () => {
-        // Only remove if we added it
-        const existingScript = document.querySelector('script[src="https://apis.google.com/js/api.js"]');
-        if (existingScript && document.body.contains(existingScript)) {
-          document.body.removeChild(existingScript);
-        }
-      };
-    }
-  }, [currentView, isGoogleConfigured]);
 
   // Process classes data for a specific section
   const getClassSchedule = (sectionIndex: number): TimeSlot[] => {
@@ -360,38 +322,109 @@ function App() {
     });
   };
 
-  const handleSectionSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedSection.trim()) return;
-    
-    setIsLoading(true);
-    
+  const loadScheduleForSection = (section: string): boolean => {
     // Normalize section input - add 'S' prefix if it's just a number
-    let normalizedSection = selectedSection.trim();
+    let normalizedSection = section.trim();
     if (/^\d+$/.test(normalizedSection)) {
       // If it's just digits, add 'S' prefix
       normalizedSection = 'S' + normalizedSection.padStart(2, '0');
     }
     
     // Find section index
-    const sectionIndex = classesData.sections.findIndex(section => 
-      section.toLowerCase() === normalizedSection.toLowerCase()
+    const sectionIndex = classesData.sections.findIndex(sectionData => 
+      sectionData.toLowerCase() === normalizedSection.toLowerCase()
     );
     
     if (sectionIndex === -1) {
-      alert('Section not found! Please try a valid section like S01, S02, etc.');
-      setIsLoading(false);
-      return;
+      return false;
     }
 
     // Generate schedule
     const combinedSchedule = getCombinedSchedule(sectionIndex);
     setSchedule(combinedSchedule);
+    return true;
+  };
+
+  const handleSectionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSection.trim()) return;
+    
+    setIsLoading(true);
+    
+    const success = loadScheduleForSection(selectedSection);
+    
+    if (!success) {
+      alert('Section not found! Please try a valid section like S01, S02, etc.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Save to localStorage and update URL
+    saveSection(selectedSection.trim());
     
     await new Promise(resolve => setTimeout(resolve, 800));
     setIsLoading(false);
     setCurrentView('schedule');
   };
+
+  // Load schedule on initial render if we have a section
+  React.useEffect(() => {
+    if (initialSection && currentView === 'schedule') {
+      const success = loadScheduleForSection(initialSection);
+      if (!success) {
+        // Invalid section, go to input
+        setCurrentView('input');
+        setSelectedSection('');
+        clearSection();
+      } else {
+        // Valid section, save it to localStorage if it came from hash
+        const hash = window.location.hash;
+        const hashSection = hash.substring(1);
+        if (hashSection && hashSection === initialSection) {
+          saveSection(initialSection);
+        }
+      }
+    }
+  }, []);
+
+  // Handle hash change navigation
+  React.useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      const hashSection = hash.substring(1);
+      
+      if (hashSection && /^\d+$/.test(hashSection)) {
+        // Navigated to a section hash
+        const normalizedSection = 'S' + hashSection.padStart(2, '0');
+        const sectionExists = classesData.sections.some(section => 
+          section.toLowerCase() === normalizedSection.toLowerCase()
+        );
+        
+        if (sectionExists) {
+          setSelectedSection(hashSection);
+          const success = loadScheduleForSection(hashSection);
+          if (success) {
+            setCurrentView('schedule');
+            localStorage.setItem(STORAGE_KEY, hashSection);
+          }
+        } else {
+          // Invalid section, go to home
+          setCurrentView('input');
+          setSelectedSection('');
+          localStorage.removeItem(STORAGE_KEY);
+          window.location.hash = '';
+        }
+      } else {
+        // Navigated to home (no hash)
+        setCurrentView('input');
+        setSelectedSection('');
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const getMealTypeColor = (meal: string) => {
     switch (meal) {
@@ -514,9 +547,12 @@ function App() {
                   </span>
                 </div>
                 <div className='flex items-center space-x-3 py-2 md:py-0 border-t md:border-t-0 md:border-l border-gray-700/50 md:pl-4'>
-                  <Icon icon='logos:google-calendar' className='w-5 h-5' />
+                  <Icon
+                    icon='solar:calendar-bold-duotone'
+                    className='w-5 h-5 text-blue-400'
+                  />
                   <span className='text-sm text-gray-300 font-medium whitespace-nowrap'>
-                    Calendar Export
+                    Calendar (.ics)
                   </span>
                 </div>
               </div>
@@ -543,7 +579,11 @@ function App() {
           <div className='flex items-center justify-between'>
             <div className='flex items-center space-x-3 md:space-x-6 flex-1 min-w-0'>
               <button
-                onClick={() => setCurrentView("input")}
+                onClick={() => {
+                  setCurrentView("input");
+                  setSelectedSection('');
+                  clearSection();
+                }}
                 className='flex items-center space-x-2 text-zinc-400 hover:text-white transition-colors duration-200 group flex-shrink-0'
               >
                 <Icon
@@ -565,37 +605,32 @@ function App() {
               </div>
             </div>
 
-            {/* Google Calendar Export Button */}
-            {isGoogleConfigured ? (
-              <button
-                onClick={exportToGoogleCalendar}
-                disabled={isExporting}
-                className='flex items-center space-x-1.5 bg-gradient-to-r from-[#a782e0] to-violet-600 hover:from-[#a782e0] hover:to-violet-700 disabled:from-zinc-600 disabled:to-zinc-600 disabled:cursor-not-allowed text-white font-medium px-3 md:px-6 py-2 md:py-3 rounded-2xl transition-all duration-300 flex-shrink-0'
-              >
-                {isExporting ? (
-                  <>
-                    <Icon
-                      icon='solar:refresh-bold-duotone'
-                      className='w-4 h-4 md:w-5 md:h-5 animate-spin'
-                    />
-                    <span className='text-sm md:text-base'>Exporting...</span>
-                  </>
-                ) : (
-                  <>
-                    <Icon
-                      icon='logos:google-calendar'
-                      className='w-4 h-4 md:w-5 md:h-5'
-                    />
-                    <span className='text-sm md:text-base'>
-                      {isGoogleSignedIn ? "Export" : "Connect"}
-                    </span>
-                    <span className='hidden md:inline'>
-                      {isGoogleSignedIn ? " to Calendar" : " Google Calendar"}
-                    </span>
-                  </>
-                )}
-              </button>
-            ) : null}
+            {/* ICS Export Button */}
+            <button
+              onClick={exportToICS}
+              disabled={isExporting}
+              className='flex items-center space-x-1.5 bg-gradient-to-r border border-[#a782e0] hover:border-zinc-800 hover:from-[#a782e0] hover:to-violet-600 disabled:from-zinc-600 disabled:to-zinc-600 disabled:cursor-not-allowed text-white font-medium px-3 md:px-6 py-2 md:py-3 rounded-2xl flex-shrink-0'
+            >
+              {isExporting ? (
+                <>
+                  <Icon
+                    icon='solar:refresh-bold-duotone'
+                    className='w-4 h-4 md:w-5 md:h-5 animate-spin'
+                  />
+                  <span className='text-sm md:text-base'>Downloading...</span>
+                </>
+              ) : (
+                <>
+                  <Icon
+                    icon='mage:calendar-download-fill'
+                    className='w-4 h-4 md:w-5 md:h-5'
+                  />
+                  <span className='text-sm md:text-base'>
+                    Download Calendar (.ics)
+                  </span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
